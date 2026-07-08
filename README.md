@@ -3,7 +3,7 @@
 A browser-based music notation game for Archipelago: a song plays with its
 melody silenced, and you rewrite that melody by ear, note by note, on a
 staff. Pitches, note values, and even the backing tracks are Archipelago
-items â€” you can only write (and hear) the music you own.
+items. You can only write (and hear) the music you own.
 
 Each run plays one song from a premade library, drawn at generation time
 (the seed tells the client which one). Add your own MIDIs with
@@ -13,8 +13,8 @@ Drum Track, and so on).
 
 Two pieces live in this folder:
 
-- `composeapelago/` â€” the apworld (plus `composeapelago.apworld`, ready to install)
-- `webapp/` â€” the client (Vite + React + TypeScript)
+- `composeapelago/ - the apworld (plus `composeapelago.apworld`, ready to install)
+- `webapp/ - the client (Vite + React + TypeScript)
 
 ## Quick start
 
@@ -28,6 +28,12 @@ Two pieces live in this folder:
 3. Generate normally (ArchipelagoGenerate) and host the seed.
 
 ### Run the client
+
+Online:
+
+Just go to composeapelago.com
+
+Local:
 
 ```
 cd webapp
@@ -45,7 +51,7 @@ unlock pitches and note values; each correct note (or completed bar) sends
 the next location check; 100% completion sends the goal.
 
 **Offline dev mode**: tick the checkbox instead of connecting. Unlocks come
-from `webapp/public/offline-unlocks.json` â€” edit that list freely.
+from `webapp/public/offline-unlocks.json - edit that list freely.
 
 ## Playing
 
