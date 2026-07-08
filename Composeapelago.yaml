@@ -1,0 +1,21 @@
+﻿# Composeapelago YAML template.
+# Fill in your slot name, then generate normally through Archipelago.
+# The song is always chosen randomly by the installed apworld.
+
+name: Player{number}
+description: Default Composeapelago Template
+game: Composeapelago
+requires:
+  version: 0.6.6
+
+Composeapelago:
+  progression_balancing: 50
+  accessibility: full
+
+
+  # per_note: each location is "Note N placed correctly" (one per melody
+  # note). bars: each location is "Bar N completed" (one per melody bar).
+  location_mode: per_note
+
+
+

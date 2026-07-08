@@ -1,0 +1,341 @@
+﻿/* Composeapelago styles. Dark app chrome around a light score card so the
+   engraving stays readable. */
+
+:root {
+  --bg: #16141d;
+  --panel: #221f2c;
+  --panel-border: #37324a;
+  --text: #d8d4e4;
+  --text-dim: #8d87a0;
+  --accent: #7b6cff;
+  --correct: #2f9e44;
+  --wrong: #e03131;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+/* ---------------------------------- connect panel ---------------------------------- */
+
+.connect-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.connect-panel input:not([type="checkbox"]) {
+  width: 150px;
+}
+
+.connect-panel input.port { width: 70px; }
+
+input, select, button {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.55; cursor: default; }
+
+.offline-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.status-text { color: var(--text-dim); font-size: 0.85rem; }
+
+/* ---------------------------------- song panel ---------------------------------- */
+
+/* Track info on the left, the pitch ownership grid on the right. */
+.song-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.track-picker { flex: 1; min-width: 340px; }
+
+.song-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.file-button {
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.file-button:hover { border-color: var(--accent); }
+.file-button input { display: none; }
+
+.track-table {
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.track-table th, .track-table td {
+  text-align: left;
+  padding: 3px 12px 3px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.track-table tbody tr.selected { background: #322c4d; }
+.track-table tbody tr.locked-track { opacity: 0.45; }
+
+/* ---------------------------------- toolbar ---------------------------------- */
+
+/* One row for everything you touch while writing: transport, note values,
+   the cursor tool, and the pitch map. Wraps on narrow windows. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.transport-button { font-size: 1.1rem; min-width: 44px; }
+
+.history-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.tempo { color: var(--text-dim); }
+
+.loop-controls { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.loop-controls input[type="number"] { width: 58px; }
+
+.reference-button { border-color: #574fd6; }
+
+.completion {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ---------------------------------- tool select ---------------------------------- */
+
+.tool-select { display: flex; gap: 6px; }
+.tool-button .tool-icon { font-size: 1.05rem; line-height: 1.6; }
+
+/* ---------------------------------- pitch grid ---------------------------------- */
+
+.pitch-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+
+.pitch-grid-row { display: flex; gap: 2px; align-items: center; }
+
+.pitch-grid-octave {
+  width: 16px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: right;
+  padding-right: 3px;
+}
+
+.pitch-grid-letter {
+  width: 24px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.pitch-cell {
+  width: 24px;
+  height: 14px;
+  border-radius: 3px;
+  background: #39344a;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pitch-cell.unlocked { background: var(--correct); }
+.pitch-cell.unlocked:hover { outline: 2px solid #fff; outline-offset: -1px; }
+
+/* ---------------------------------- score ---------------------------------- */
+
+.score-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 62vh;
+  background: #fdfcf8;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.score-inner {
+  position: relative;
+  cursor: crosshair;
+}
+
+.score-scroll.tool-select .score-inner { cursor: default; }
+.score-scroll.tool-delete .score-inner { cursor: pointer; }
+
+.score-svg { position: relative; z-index: 1; }
+.score-svg svg { display: block; }
+
+.bar-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+}
+.bar-highlight.looped { background: #efe9ff; }
+.bar-highlight.playing { background: #dcefe3; }
+
+.entry-cursor {
+  position: absolute;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--accent);
+  z-index: 2;
+  pointer-events: none;
+  transition: left 80ms ease-out, top 80ms ease-out;
+}
+
+/* Orange cursor = you navigated back and are editing an older note. */
+.entry-cursor.edit-mode {
+  background: #f59f00;
+  box-shadow: 0 0 6px #f59f00;
+}
+
+/* ---------------------------------- palette ---------------------------------- */
+
+.palette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.palette-divider { width: 1px; height: 34px; background: var(--panel-border); }
+
+.palette-button {
+  position: relative;
+  min-width: 44px;
+  padding: 4px 6px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.palette-button .note-icon { display: block; }
+.palette-button .hotkey { font-size: 0.65rem; color: var(--text-dim); }
+
+.palette-button.selected {
+  border-color: var(--accent);
+  background: #322c4d;
+}
+
+.palette-button.locked { opacity: 0.45; }
+.palette-button .lock {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+}
+
+/* ---------------------------------- completion banner ---------------------------------- */
+
+.complete-banner {
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #d3f9d8;
+  background: #12351c;
+  border: 1px solid var(--correct);
+  border-radius: 8px;
+  padding: 10px 16px;
+  box-shadow: 0 0 14px rgba(47, 158, 68, 0.45);
+}
+
+/* ---------------------------------- misc ---------------------------------- */
+
+.flash {
+  position: fixed;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  background: #4a1f24;
+  border: 1px solid var(--wrong);
+  color: #ffd7da;
+  padding: 8px 18px;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  z-index: 10;
+}
+.flash.visible { opacity: 1; }
+
+footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  padding: 6px 20px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+

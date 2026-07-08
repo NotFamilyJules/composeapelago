@@ -1,0 +1,29 @@
+﻿# Local editor/agent files
+.codex/
+.claude/
+.agents/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Web dependencies and generated build
+webapp/node_modules/
+webapp/dist/
+webapp/.vite/
+
+# Local test/generated AP files
+test_players/
+test_players_forced/
+generate_log.txt
+
+# Source scaffolds or unrelated workspaces
+APSkeleton-main/
+goldeneye_apworld/
+
+# Private/extended assets kept out of the public release
+song_packs/
+
+# Local release staging
+release_files/
+*.zip
