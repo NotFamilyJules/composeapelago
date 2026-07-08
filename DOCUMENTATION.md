@@ -1,4 +1,4 @@
-﻿# Composeapelago â€” Full Technical Documentation
+﻿# Composeapelago - Full Technical Documentation
 
 This document is a complete, self-contained description of the Composeapelago
 project: the concept, how every part works, the contracts between the parts,
@@ -48,8 +48,8 @@ generation time, to guarantee the seed is completable in some order.
 Two halves plus a shared contract:
 
 ```
-composeapelago/          Python apworld â€” generation side (runs inside Archipelago)
-webapp/                  Vite + React + TypeScript client â€” play side (browser)
+composeapelago/          Python apworld - generation side (runs inside Archipelago)
+webapp/                  Vite + React + TypeScript client - play side (browser)
 build-apworld.ps1        zips composeapelago/ -> composeapelago.apworld, installs it
 Composeapelago.yaml      player options template for generation
 ```
@@ -82,7 +82,7 @@ Tiny shared classes: `ComposeapelagoLocation`, `ComposeapelagoItem`
 (subclasses tagging the game name), and `ItemData(ap_code, classification,
 count)` / `LocData(ap_code, region)` plain data holders.
 
-### 3.2 `Songs.py` â€” the song registry (generation side)
+### 3.2 `Songs.py` - the song registry (generation side)
 ```python
 SONGS = {
     "all_star": {
@@ -97,22 +97,22 @@ SONGS = {
 ```
 `# add-song:` marker comments let the `add-song` script insert new song
 entries. **Location counts come from the randomly chosen song, not from the
-YAML** â€” players never pick songs or count notes by hand.
+YAML** - players never pick songs or count notes by hand.
 
 ### 3.3 `Options.py`
 Only one player-facing game option:
 - `location_mode` (Choice): `per_note = 0` (one check per melody note) or
   `bars = 1` (one check per completed bar).
 
-### 3.4 `Items.py` â€” item tables and pool construction
+### 3.4 `Items.py` - item tables and pool construction
 Item categories and id ranges:
 
 | Category | Names | IDs | Classification |
 |---|---|---|---|
-| Pitches | `C1`â€¦`B7` (12 pitch classes Ã— octaves 1â€“7, sharps spelling) | 76241001â€“76241084 | octaves 3â€“4 progression, others useful |
-| Note values | Quarter/Whole/Half/Eighth/Sixteenth Note, Dotted Modifier, Tie, Rest | 76242001â€“76242008 | progression |
+| Pitches | `C1`â€¦`B7` (12 pitch classes Ã— octaves 1-7, sharps spelling) | 76241001-76241084 | octaves 3-4 progression, others useful |
+| Note values | Quarter/Whole/Half/Eighth/Sixteenth Note, Dotted Modifier, Tie, Rest | 76242001-76242008 | progression |
 | Filler | Metronome Click | 76243001 | filler |
-| Backing tracks | Bass/Chord/Drum/Harmony/Counter Melody Track, Extra Track 1â€“3 | 76244001â€“76244008 | useful |
+| Backing tracks | Bass/Chord/Drum/Harmony/Counter Melody Track, Extra Track 1-3 | 76244001-76244008 | useful |
 | Event | Victory | none | progression |
 
 Key concepts:
@@ -139,9 +139,9 @@ Key concepts:
 Static tables (AP requires the full nameâ†’id map at import time):
 - `"Note N placed correctly"` for N in 1â€¦999 â†’ id 76245000+N
 - `"Bar N completed"` for N in 1â€¦300 â†’ id 76246000+N
-- `"Melody Complete"` â€” event, no id.
+- `"Melody Complete"` - event, no id.
 
-**The note cap can never exceed 999** â€” note ids would collide with the bar
+**The note cap can never exceed 999** - note ids would collide with the bar
 id block. Which locations actually exist in a seed:
 `get_active_location_count` reads the chosen song's `note_count` or
 `bar_count` per `location_mode`, and `is_valid_location` filters the tables
@@ -151,7 +151,7 @@ to the first N of the active mode.
 Deliberately minimal: `Menu -> Staff`, all locations in Staff. All gating is
 location rules, not region access.
 
-### 3.7 `Rules.py` â€” the progression logic
+### 3.7 `Rules.py` - the progression logic
 The design goal: sphere 1 must not be the whole game, and the items that
 matter (rhythms + octave 3/4 pitches) must land early. Rules cannot reference
 the actual melody (any MIDI is allowed and the melody isn't known to logic in
@@ -169,8 +169,8 @@ Each location past a tier boundary requires
 `has_from_list_unique(NOTE_VALUE_ITEM_NAMES, n)` **and**
 `has_from_list_unique(PRIORITY_PITCH_NAMES, m)`. The "Melody Complete" event
 requires the full toolbox. Result: fill must place rhythm items and octave
-3/4 pitches reachable before the 25/50/75% marks â€” verified in spoiler
-playthroughs, spheres 1â€“2 are dominated by exactly those items.
+3/4 pitches reachable before the 25/50/75% marks - verified in spoiler
+playthroughs, spheres 1-2 are dominated by exactly those items.
 
 **The caps** (`tier_requirements`): a requirement can never exceed what is
 obtainable at that point = starting inventory + one item per earlier
@@ -185,7 +185,7 @@ Wires everything into AP's `World` subclass:
 - `create_regions` / `create_items` / `set_rules` delegate to the modules.
   (AP call order: generate_early â†’ create_regions â†’ create_items â†’ set_rules
   â†’ fill; the rules read the precollect counters that create_items set.)
-- `fill_slot_data` sends: all option values, `song` (the key â€” the client
+- `fill_slot_data` sends: all option values, `song` (the key - the client
   loads this song), `Seed`, `Slot`, `TotalLocations`.
 
 ### 3.9 `archipelago.json`
@@ -204,7 +204,7 @@ synth + sequencer), `archipelago.js` 2 (AP client).
 `soundfont/GeneralUserGS.sf2` (~31 MB General MIDI SoundFont),
 `offline-unlocks.json` (offline mode's grant list).
 
-### 4.1 `theory.ts` â€” pure music math
+### 4.1 `theory.ts` - pure music math
 - Everything is measured in integer **ticks at 480/quarter**
   (`TICKS_PER_QUARTER`); the finest grid is a sixteenth (`GRID_TICKS = 120`).
   Integer ticks make position/duration comparison exact.
@@ -212,11 +212,11 @@ synth + sequencer), `archipelago.js` 2 (AP client).
   double as the AP item names.
 - `DURATIONS` table: per duration id (wholeâ€¦sixteenth) the tick length,
   VexFlow duration code, AP item name, and hotkey.
-- Helpers: midiâ†”name, midiâ†’VexFlow key, black-key test, "nearest octave for
+- Helpers: midi'name, midiâ†’VexFlow key, black-key test, "nearest octave for
   a typed letter" (picks the octave closest to the previous note), and
   diatonic (staff-step) math used to convert click height â†’ pitch.
 
-### 4.2 `songs.ts` â€” the song registry (client side)
+### 4.2 `songs.ts` - the song registry (client side)
 Mirror of `Songs.py` (same keys, same track item names):
 ```ts
 { key, name, url, melodyTrack, backingTracks: [{trackIndex, itemName}], measureCount }
@@ -224,7 +224,7 @@ Mirror of `Songs.py` (same keys, same track item names):
 `pickRandomSong()` for offline runs; `songByKey()` when slot_data names the
 seed's song. Also carries the `// add-song:entry` marker.
 
-### 4.3 `song.ts` â€” loading a song
+### 4.3 `song.ts` - loading a song
 Parses the MIDI, reads the first time signature and tempo, and extracts
 **target notes** from the melody track: rescale from the file's PPQ to 480,
 snap starts/durations to the sixteenth grid, force monophonic (highest note
@@ -232,37 +232,37 @@ wins on simultaneous starts). `Song` = definition + parsed midi + raw bytes +
 targetNotes + bar geometry (barTicks, measureCount) + tempo. `listTracks`
 summarizes tracks (name/instrument/note count) for the UI.
 
-### 4.4 `entry.ts` â€” the editor model (the heart of the UX)
-State: `bars: EntryEvent[][]` (one event list per measure â€” bars are
+### 4.4 `entry.ts` - the editor model (the heart of the UX)
+State: `bars: EntryEvent[][]` (one event list per measure - bars are
 independent containers, so editing one bar never shifts another) and a
 **caret cursor** `{barIndex, slot}`:
 
 - `slot < bar.length` â†’ the caret is **ON an event** ("edit mode", drawn
   orange): keys modify that event in place.
 - `slot == bar.length` â†’ the caret is **IN the bar's gap** ("entry mode",
-  purple): the unfilled tail of any bar that still has room â€” including
+  purple): the unfilled tail of any bar that still has room - including
   completely empty mid-piece measures. Typing inserts into that bar, then the
   caret jumps to the next gap.
 
 `cursorPositions` enumerates every legal caret stop (each bar's events, plus
-one gap per non-full bar) â€” arrow keys walk this list. Insertion enforces the
+one gap per non-full bar) - arrow keys walk this list. Insertion enforces the
 bar rule: an event must fit the remaining space of its bar (ties are how you
 cross barlines); errors are returned as strings for the UI to flash.
 `backspaceTarget` gives "the note under the caret, or the one just before a
-gap caret" â€” that's also what transpose/tie act on, so after typing a note
+gap caret" - that's also what transpose/tie act on, so after typing a note
 the arrows immediately tune it. All functions are pure (state in â†’ state out).
 
-### 4.5 `grading.ts` â€” correctness
+### 4.5 `grading.ts` - correctness
 Comparison happens on **sounding notes**: consecutive tied entry notes of the
 same pitch merge into one long note first, because the player matches sound,
 not spelling. A sounding note is correct iff a target note exists with the
-exact same `(startTick, durationTicks, midi)` â€” that is pitch, octave,
+exact same `(startTick, durationTicks, midi)` - that is pitch, octave,
 duration, and position. Rests are green when no target note starts inside
 them. Output: per-event correct flags (green/red), matchedCount / totalTargets
 (the completion %), and `completedBars` (a bar is complete when all its
 target notes are matched and nothing wrong sounds in it) for bars mode.
 
-### 4.6 `ScoreView.tsx` â€” engraving and mouse input
+### 4.6 `ScoreView.tsx` - engraving and mouse input
 Renders the player's music with VexFlow as **wrapped systems** like real
 sheet music: bars per row = what fits the container width (ResizeObserver;
 bars stretch to fill the row), vertical scrolling only, clef on every system,
@@ -272,8 +272,8 @@ colored green/red from the grade. Ties draw (split across system breaks).
 
 During each draw it records geometry: every bar's rect, every note's x, and
 each bar's **gap x** (where the caret sits for that bar's tail). The caret is
-a plain absolutely-positioned div moved to note-x/gap-x â€” no VexFlow redraw
-for cursor movement â€” and auto-scrolls its system into view.
+a plain absolutely-positioned div moved to note-x/gap-x - no VexFlow redraw
+for cursor movement - and auto-scrolls its system into view.
 
 Clicks map back through the geometry (row from y, bar from x, pitch from
 staff-line math) and obey the active **cursor tool**: Write places/replaces,
@@ -297,16 +297,16 @@ caret to the start; a requestAnimationFrame loop follows `playbackTime()` to
 highlight the playing bar and implement bar-range looping (seek back at loop
 end).
 
-### 4.8 `ap.ts` â€” the Archipelago client
+### 4.8 `ap.ts` - the Archipelago client
 `connect(host, port, slot)` uses archipelago.js `Client.login` with game name
 `"Composeapelago"`; an `itemsReceived` listener adds item **names** to the
 unlock set (names are the contract). slot_data provides options, the song
 key, and `TotalLocations`.
 
-**The check ladder**: location ids are computed, not looked up â€”
+**The check ladder**: location ids are computed, not looked up -
 `76245000 + N` (notes) / `76246000 + N` (bars). Progress (matchedCount or
 completedBars) only ratchets upward: when it exceeds `checksSent`, the next
-rungs are sent. **The ladder is a progress count, not per-specific-note** â€”
+rungs are sent. **The ladder is a progress count, not per-specific-note** -
 matching any target note advances "Note 1 placed correctly", then "Note 2",
 etc. The **mismatch rule**: checks cap at `TotalLocations`; when grading says
 100% complete, all remaining rungs are flushed at once and
@@ -321,31 +321,31 @@ locked pitch â†’ red flash "F#4 is locked."; locked palette buttons are dim
 with a lock icon but stay visible.
 
 ### 4.10 UI components
-- `App.tsx` â€” owns all state, wires everything; keyboard handling lives in a
+- `App.tsx` - owns all state, wires everything; keyboard handling lives in a
   ref'd handler. Undo/redo: snapshots of the entry state pushed on every
   successful edit (not cursor moves), Ctrl+Z/Ctrl+Y + toolbar â†¶â†· buttons,
   200-step cap, cleared on song load. `COMPLETE_MESSAGE` constant at the top
   = the banner text shown at 100%.
-- `TrackList.tsx` â€” the song panel: melody row + each backing track with
+- `TrackList.tsx` - the song panel: melody row + each backing track with
   ðŸ”’/ðŸ”Š state. All wording is literal strings here.
-- `PitchGrid.tsx` â€” 12Ã—7 grid of pitch items (octave 7 top). Green = owned;
+- `PitchGrid.tsx` - 12Ã—7 grid of pitch items (octave 7 top). Green = owned;
   **clicking a cell enters that exact pitch at the caret**.
-- `Palette.tsx` + `NoteIcon.tsx` â€” duration/dot/tie/rest buttons with
+- `Palette.tsx` + `NoteIcon.tsx` - duration/dot/tie/rest buttons with
   hand-drawn SVG icons (unicode music glyphs render detached stems in many
   fonts, so the stems are drawn as lines starting on the notehead).
-- `ToolSelect.tsx` â€” Select / Write / Delete cursor tools.
-- `Transport.tsx` â€” play/pause/stop, tempo readout, full-mix/solo select,
+- `ToolSelect.tsx` - Select / Write / Delete cursor tools.
+- `Transport.tsx` - play/pause/stop, tempo readout, full-mix/solo select,
   bar-range loop, Reference listen.
-- `ConnectPanel.tsx` â€” host/port/slot + offline toggle + status text.
+- `ConnectPanel.tsx` - host/port/slot + offline toggle + status text.
 
 ### 4.11 Controls
 | Input | Action |
 |---|---|
-| Aâ€“G | enter note, nearest octave to previous note |
-| 1â€“5 | select duration (wholeâ€¦sixteenth) |
+| A-G | enter note, nearest octave to previous note |
+| 1-5 | select duration (wholeâ€¦sixteenth) |
 | `.` | dotted toggle; T = tie; R = rest |
 | â†‘ â†“ | semitone up/down (on caret's active note) |
-| `#` / `b` | sharp / flat â€” `b` only flattens when a note is selected, in a gap it types B |
+| `#` / `b` | sharp / flat - `b` only flattens when a note is selected, in a gap it types B |
 | + âˆ’ | octave up/down |
 | â† â†’ / Home / End | move caret through notes and gaps |
 | Backspace | delete at caret (or the note before a gap caret) |
@@ -360,12 +360,12 @@ with a lock icon but stay visible.
 These must agree between the apworld and the webapp or the game silently
 breaks:
 
-1. **Game name** `"Composeapelago"` (`__init__.py` â†” `ap.ts` login).
+1. **Game name** `"Composeapelago"` (`__init__.py` ' `ap.ts` login).
 2. **Item names**: pitch names (`C1`â€¦`B7`, sharps), note value names, track
    item names. The client keys everything off received item *names*.
 3. **Location id bases**: `76245000 + N` / `76246000 + N`
-   (`Locations.py` â†” `ap.ts`). Note cap â‰¤ 999 (id collision).
-4. **Song registry**: keys and per-song `track_items` in `Songs.py` â†”
+   (`Locations.py` ' `ap.ts`). Note cap â‰¤ 999 (id collision).
+4. **Song registry**: keys and per-song `track_items` in `Songs.py` '
    `songs.ts` `backingTracks` item names; `note_count`/`bar_count` must be
    what the client's quantizer actually produces (the `add-song`/
    `inspect-midi` scripts compute them with identical code).
@@ -375,7 +375,7 @@ breaks:
 
 ## 6. The song pipeline
 
-Songs are premade and ship with the game (no runtime upload â€” both sides
+Songs are premade and ship with the game (no runtime upload - both sides
 must know the same songs). Adding one is two commands from `webapp/`:
 
 ```
@@ -386,13 +386,13 @@ npm run add-song -- path\to\song.mid        (optionally --melody <trackIndex>)
 `scripts/add-song.mjs`:
 1. **Validates** and prints exact errors: melody must be one track, single
    line (chords collapse to top note, warned); rhythms must sit on the
-   sixteenth grid (loose timing/triplets warned â€” they'll grade oddly);
-   melody pitches within C1â€“B7 (else "transpose"); â‰¤999 notes / â‰¤300 bars;
+   sixteenth grid (loose timing/triplets warned - they'll grade oddly);
+   melody pitches within C1-B7 (else "transpose"); â‰¤999 notes / â‰¤300 bars;
    one time signature (first one used); â‰¤8 backing tracks.
 2. **Copies** the file into `public/songs/`.
-3. **Assigns track roles**: channel 9 â†’ Drum Track; GM programs 32â€“39 â†’ Bass
+3. **Assigns track roles**: channel 9 â†’ Drum Track; GM programs 32-39 â†’ Bass
    Track; everything else takes the chain Chord â†’ Harmony â†’ Counter Melody â†’
-   Extra 1â€“3.
+   Extra 1-3.
 4. **Registers** the song in `songs.ts` and `Songs.py` (note/bar/measure counts)
    via the `add-song:` marker comments. Duplicate keys are refused.
 
@@ -421,13 +421,13 @@ apworld and installs it into `C:\ProgramData\Archipelago\custom_worlds`.
 | Grading strictness | `gradeEntry` in `grading.ts` (e.g. drop duration from the match key for pitch-only mode) |
 
 Design decisions worth preserving:
-- **Never reveal the answer visually** â€” feedback is only red/green after
+- **Never reveal the answer visually** - feedback is only red/green after
   entry; the reference is *audio*.
 - Items gate **abilities** (write/hear), not cosmetics. (Key signatures were
   deliberately NOT made items for this reason: they change notation, not
   ability, and gating them punishes readability. Recommended handling:
   auto-display from the MIDI + spell notes relative to the key. Not yet
-  implemented â€” current engraving is sharps-only with per-note accidentals
+  implemented - current engraving is sharps-only with per-note accidentals
   and no key signature drawn.)
 
 ## 8. Simplification notes (if rebuilding smaller)
@@ -440,7 +440,7 @@ Cut candidates for a minimal build: bars location mode (per-note covers the
 concept), cursor tools (keyboard + write-only clicks suffice), the tie item
 (biggest source of edge cases: merging, cross-bar, engraving splits),
 undo/redo, pitch-grid clicking, and looping. The 31 MB SoundFont can be
-replaced by a small sf2/sf3 (e.g. TimGM6mb, ~6 MB) at a quality cost â€” one
+replaced by a small sf2/sf3 (e.g. TimGM6mb, ~6 MB) at a quality cost - one
 line in `synth.ts`.
 
 ---
@@ -459,19 +459,19 @@ matter:
    - Host the client on plain `http://` (fine for a hobby domain, ugly).
    - Tell users to use wss-capable hosts (seeds hosted on archipelago.gg
      support `wss://`), and have the client try `wss://` first. archipelago.js
-     accepts explicit `ws://` / `wss://` prefixes in the login URL â€” today the
+     accepts explicit `ws://` / `wss://` prefixes in the login URL - today the
      client passes bare `host:port` and lets the library pick; for public
      hosting, add a protocol dropdown or try-wss-then-ws logic in `ap.ts`.
    - Or provide a small WSS reverse proxy for self-hosters.
 2. **Asset weight.** The SoundFont is ~31 MB and loads on first user gesture.
    For public hosting: serve it compressed (brotli), cache it aggressively
    (immutable), consider a smaller font or SF3 (spessasynth supports it), and
-   show a loading indicator (currently there is none â€” first Play just waits).
+   show a loading indicator (currently there is none - first Play just waits).
 3. **Song licensing.** This is the real blocker for public deployment: the
    current library (All Star, One Last Breath, Pokemon Theme) is copyrighted
    music transcribed as MIDI. Fine on a private machine among friends;
    **not distributable on a public site**. For public hosting, stock the
-   library with original compositions (see `make-starter-song.mjs` â€” the
+   library with original compositions (see `make-starter-song.mjs` - the
    original "Getting Started" tune was built this way) or public-domain
    works (pre-1930 compositions; note MIDI *arrangements* can carry their own
    rights). The SoundFont (GeneralUser GS) has a permissive license that
@@ -513,7 +513,7 @@ ArchipelagoServer.exe <output zip>               # default port 38281
   triplets/32nds (sixteenth grid), no dynamics/articulations/lyrics, no
   chords in the entry lane, first time-signature and tempo only for layout.
 - Checks are a progress ladder (any matched target advances rung N), by
-  design â€” the YAML/song count fixes the pool, the client caps and flushes.
+  design - the YAML/song count fixes the pool, the client caps and flushes.
 - Checks are never revoked (AP checks are permanent); deleting a matched note
   lowers the % but already-sent checks stay sent.
 - The running mix doesn't hot-swap when a track item arrives mid-playback;
@@ -522,7 +522,7 @@ ArchipelagoServer.exe <output zip>               # default port 38281
   request); notable one that WAS needed: `package.json` must stay BOM-free
   (PowerShell 5.1 writes BOMs by default and Vite chokes).
 - AP reconnect: the client resends the full ladder on reconnect (server
-  ignores duplicates); local entry state lives only in memory â€” a page reload
+  ignores duplicates); local entry state lives only in memory - a page reload
   loses the written score (no persistence yet).
 
 
