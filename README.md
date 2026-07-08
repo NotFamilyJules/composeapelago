@@ -134,7 +134,11 @@ a bar is full, the next note starts the next bar automatically.
 - **Reference** plays the hidden target melody for the cursor's bar (or the
   looped bars) â€” unlimited uses, that's the "by ear" part.
 
-## Iteration 1 scope
+## AI Disclaimer
+
+This "game" and "apworld" is mostly vibecoded trash. Sorry, mostly just trying 
+to prototype this dumb idea but it seems pretty cool so far so hopefully if it 
+is actually something people wanna see I'll dedicate time to actually flesh coding it.
 
 Single melodic line, treble clef, piano sound, no chords, no key
 signatures, no dynamics/articulations/lyrics, no hints or deathlink,
