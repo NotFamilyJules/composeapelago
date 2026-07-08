@@ -55,28 +55,30 @@ from `webapp/public/offline-unlocks.json` â€” edit that list freely.
 2. Backing tracks join the mix as their items arrive; the original melody
    track is always muted and replaced by whatever you write.
 3. Write what you hear. A note turns **green** when pitch, octave, duration
-   and position all match the hidden melody; otherwise it stays **red**.
+   and position all match the hidden melody; **yellow** means you have the
+   right rhythm but wrong pitch/rest, and if you're totally wrong then it
+   stays **red**.
 
 ### Controls
 
 | Key | Action |
 | --- | --- |
-| Aâ€“G | enter that note, nearest octave to the previous note |
-| 1â€“5 | duration: whole, half, quarter, eighth, sixteenth |
+| A-G | enter that note, nearest octave to the previous note |
+| 1-5 | duration: whole, half, quarter, eighth, sixteenth |
 | .   | dotted toggle |
 | T   | tie (in a gap: adds a tied continuation note) |
 | R   | rest |
-| â†‘ â†“ | semitone up / down |
+| Up / Down | semitone up / down |
 | # / b | sharp / flat (b only flattens on a selected note; in a gap it types B) |
 | + âˆ’ | shift the note an octave |
 | Ctrl+Z / Ctrl+Y | undo / redo (also the â†¶ â†· toolbar buttons) |
-| â† â†’ | move the cursor |
+| Left / Right | move the cursor |
 | Home / End | jump to first / last position |
 | Backspace | delete the note at the cursor |
 | Space | play / pause |
 | Esc | stop |
 
-Mouse: the toolbar's cursor tool decides what a click does â€” **Write**
+Mouse: the toolbar's cursor tool decides what a click does ” **Write**
 places the selected duration at the clicked pitch (on an existing note it
 replaces it), **Select** moves the cursor onto a note, **Delete** removes
 it. Right click always selects, whatever the tool.
@@ -139,8 +141,4 @@ a bar is full, the next note starts the next bar automatically.
 This "game" and "apworld" is mostly vibecoded trash. Sorry, mostly just trying 
 to prototype this dumb idea but it seems pretty cool so far so hopefully if it 
 is actually something people wanna see I'll dedicate time to actually flesh coding it.
-
-Single melodic line, treble clef, piano sound, no chords, no key
-signatures, no dynamics/articulations/lyrics, no hints or deathlink,
-desktop browsers only.
 
