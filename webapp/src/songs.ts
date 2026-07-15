@@ -1,4 +1,4 @@
-﻿// The premade song library. Every run picks one of these: randomly when
+// The premade song library. Every run picks one of these: randomly when
 // offline, or whichever one the Archipelago seed chose (slot_data "song").
 //
 // The key and the backing track item names must match the apworld's
@@ -86,3 +86,6 @@ export function songByKey(key: string): SongDefinition | undefined {
   return SONG_LIBRARY.find((song) => song.key === key);
 }
 
+export function songByIndex(index: number): SongDefinition | undefined {
+  return SONG_LIBRARY[index];
+}

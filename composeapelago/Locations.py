@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 # Note ids are 76245000+N and bar ids are 76246000+N, so the note cap can
 # never go above 999 without the two id ranges colliding.
 MAX_NOTE_LOCATIONS = 999
-MAX_BAR_LOCATIONS = 300
+MAX_BAR_LOCATIONS = 150
+TITLE_GUESS_LOCATION = "Song title guessed"
+TITLE_GUESS_LOCATION_ID = 76248001
 
 # Values of the location_mode option.
 LOCATION_MODE_PER_NOTE = 0
@@ -37,13 +39,15 @@ def get_active_location_count(world: "ComposeapelagoWorld") -> int:
     from the chosen song itself: its melody's note count or bar count."""
     song = SONGS[world.song_key]
     if world.options.location_mode.value == LOCATION_MODE_BARS:
-        return song["bar_count"]
+        return min(song["bar_count"], MAX_BAR_LOCATIONS)
     return song["note_count"]
 
 
 def is_valid_location(world: "ComposeapelagoWorld", name: str) -> bool:
     """A location is valid when it belongs to the active mode and its number
     is within the chosen song's count."""
+    if name == TITLE_GUESS_LOCATION:
+        return True
     if name in event_locations:
         return True
     count = get_active_location_count(world)
@@ -54,7 +58,7 @@ def is_valid_location(world: "ComposeapelagoWorld", name: str) -> bool:
 
 def get_total_locations(world: "ComposeapelagoWorld") -> int:
     """Total real locations (events excluded, they have no address)."""
-    return get_active_location_count(world)
+    return get_active_location_count(world) + 1
 
 
 def get_location_names() -> Dict[str, int]:
@@ -77,6 +81,10 @@ event_locations = {
     "Melody Complete": LocData(None, "Staff"),
 }
 
+special_locations = {
+    TITLE_GUESS_LOCATION: LocData(TITLE_GUESS_LOCATION_ID, "Staff"),
+}
+
 # Reverse lookups so is_valid_location and Rules.py can go from a location
 # name back to its note/bar number without string parsing.
 note_location_numbers = {note_location_name(n): n for n in range(1, MAX_NOTE_LOCATIONS + 1)}
@@ -85,5 +93,6 @@ bar_location_numbers = {bar_location_name(n): n for n in range(1, MAX_BAR_LOCATI
 location_table = {
     **composeapelago_note_locations,
     **composeapelago_bar_locations,
+    **special_locations,
     **event_locations,
 }

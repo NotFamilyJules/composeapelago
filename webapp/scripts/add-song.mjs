@@ -28,7 +28,7 @@ const PITCH_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#",
 const LOWEST_MIDI = 24;   // C1
 const HIGHEST_MIDI = 107; // B7
 const MAX_NOTES = 999;    // apworld location caps (Locations.py)
-const MAX_BARS = 300;
+const MAX_BARS = 150;
 
 // Where the registries live, relative to this script's webapp folder.
 const SONGS_TS = "src/songs.ts";
@@ -115,6 +115,9 @@ const measureCount = Math.max(barCount, ...midi.tracks.map((track) => {
 }));
 if (barCount > MAX_BARS) {
   errors.push(`melody spans ${barCount} bars, the cap is ${MAX_BARS}`);
+}
+if (measureCount > MAX_BARS) {
+  errors.push(`song is ${measureCount} measures, the cap is ${MAX_BARS}`);
 }
 
 // ---------------------------------- assign track roles ----------------------------------

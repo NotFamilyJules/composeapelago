@@ -1,12 +1,12 @@
-﻿from BaseClasses import Item, Tutorial
+from BaseClasses import Item, Tutorial
 from worlds.AutoWorld import WebWorld, World
 
 from .Items import STARTING_NOTE_VALUES, create_item, create_itempool, item_table
-from .Locations import get_location_names, get_total_locations
+from .Locations import get_active_location_count, get_location_names, get_total_locations
 from .Options import ComposeapelagoOptions, create_option_groups
 from .Regions import create_regions
 from .Rules import set_rules
-from .Songs import SONGS
+from .Songs import SONGS, SONG_ORDER
 
 
 def build_item_name_to_id() -> dict[str, int]:
@@ -64,6 +64,7 @@ class ComposeapelagoWorld(World):
 
     # Which premade song this seed plays, chosen in generate_early.
     song_key = ""
+    song_index = 0
 
     def generate_early(self) -> None:
         # Quarter notes, whole notes, and rests are always starting
@@ -72,8 +73,9 @@ class ComposeapelagoWorld(World):
         for name in STARTING_NOTE_VALUES:
             self.multiworld.push_precollected(self.create_item(name))
 
-        # Draw this run's song from the library bundled with this build.
-        self.song_key = self.random.choice(sorted(SONGS.keys()))
+        # Draw this run's song from the indexed library bundled with this build.
+        self.song_index = self.random.randrange(len(SONG_ORDER))
+        self.song_key = SONG_ORDER[self.song_index]
 
     def create_regions(self) -> None:
         create_regions(self)
@@ -94,10 +96,11 @@ class ComposeapelagoWorld(World):
         slot_data = {}
         slot_data["options"] = build_slot_options(self)
         slot_data["song"] = self.song_key
+        slot_data["song_index"] = self.song_index
         slot_data["Seed"] = self.multiworld.seed_name
         slot_data["Slot"] = self.multiworld.player_name[self.player]
-        slot_data["TotalLocations"] = get_total_locations(self)
-        slot_data["TotalMeasures"] = SONGS[self.song_key]["measure_count"]
+        slot_data["TotalLocations"] = get_active_location_count(self)
+        slot_data["TotalMeasures"] = min(150, SONGS[self.song_key]["measure_count"])
         return slot_data
 
 

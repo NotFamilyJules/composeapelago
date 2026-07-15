@@ -1,4 +1,4 @@
-﻿// Compares what the player wrote against the target melody.
+// Compares what the player wrote against the target melody.
 //
 // The comparison works on "sounding notes": tied entry notes are merged
 // into one long note first, because the player works by ear, so only the
@@ -84,10 +84,11 @@ export function gradeEntry(placed: PlacedEvent[], targets: TargetNote[], barTick
   for (const event of placed) {
     if (event.kind !== "rest") continue;
     const end = event.startTick + eventTicks(event);
+    const rhythmKey = `${event.startTick}:${eventTicks(event)}`;
     const collides = targets.some((t) => t.startTick >= event.startTick && t.startTick < end);
     const correct = !collides;
     correctByFlatIndex[event.flatIndex] = correct;
-    rhythmCorrectByFlatIndex[event.flatIndex] = correct;
+    rhythmCorrectByFlatIndex[event.flatIndex] = correct || targetRhythmKeys.has(rhythmKey);
     if (correct) correctRestCount++;
   }
 

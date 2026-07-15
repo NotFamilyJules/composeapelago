@@ -1,4 +1,4 @@
-﻿// The top of the app: owns all state and wires the pieces together.
+// The top of the app: owns all state and wires the pieces together.
 //
 //   TrackList    - the run's song and which backing tracks are unlocked
 //   ScoreView    - the staff, cursor, and mouse entry
@@ -19,32 +19,42 @@ import { ToolSelect } from "./ToolSelect";
 import { TrackList } from "./TrackList";
 import { Transport } from "./Transport";
 import type { ApSession } from "./ap";
-import { LOCATION_MODE_BARS, connect, reportProgress } from "./ap";
+import { LOCATION_MODE_BARS, connect, reportProgress, reportTitleGuess } from "./ap";
 import type { EntryEvent, EntryState } from "./entry";
 import {
   backspaceTarget, cursorOnEvent, cursorTick, deleteEvent, emptyEntry,
   eventAtCursor, firstPosition, flattenEntry, insertAtCursor,
   insertEventInBar, lastPosition, moveCursorBy, referenceMidi, replaceEvent,
 } from "./entry";
-import { gradeEntry } from "./grading";
+import { gradeEntry, soundingNotes } from "./grading";
 import type { MixMode } from "./playMidi";
 import { buildPlaybackMidi, buildReferenceMidi, tickToSeconds } from "./playMidi";
 import { loadSavedRun, saveRun } from "./save";
 import type { Song } from "./song";
 import { buildSong, listTracks } from "./song";
 import type { SongDefinition } from "./songs";
-import { pickRandomSong, songByKey } from "./songs";
+import { pickRandomSong, songByIndex, songByKey } from "./songs";
 import {
   auditionNote, initSynth, pausePlayback, playMidiFrom, playbackTime, seekTo, stopPlayback,
 } from "./synth";
 import type { DurationId } from "./theory";
-import { DURATIONS, DURATION_IDS, TICKS_PER_QUARTER, midiToName, nearestMidiForLetter } from "./theory";
+import { DURATIONS, DURATION_IDS, HIGHEST_MIDI, LOWEST_MIDI, TICKS_PER_QUARTER, midiToName, nearestMidiForLetter } from "./theory";
 import type { Unlocks } from "./unlocks";
-import { emptyUnlocks, hasDot, hasDuration, hasPitch, hasRest, hasSongTitleReveal, hasTie, loadOfflineUnlocks, visibleMeasureCount } from "./unlocks";
+import { addUnlocks, emptyUnlocks, hasDot, hasDuration, hasPitch, hasRest, hasSongTitleReveal, hasTie, hasUnlock, loadOfflineUnlocks, visibleMeasureCount } from "./unlocks";
 
 // Shown in the banner the moment the melody reaches 100% complete.
 // Change it to whatever you want your players to see.
 const COMPLETE_MESSAGE = "your did it";
+const RANDOM_HINT_ITEM = "Random Hint";
+const NEXT_PITCH_ITEM = "Next Pitch";
+const VOICE_CRACK_TRAP_ITEM = "Voice Crack Trap";
+const DRUNK_DRUMMER_TRAP_ITEM = "Drunk Drummer Trap";
+const TUNING_TRAP_ITEM = "Tuning Trap";
+const SONG_TITLE_REVEAL_ITEM = "Song Title Reveal";
+
+function normalizeTitle(value: string): string {
+  return value.trim().toLowerCase();
+}
 
 export default function App() {
   const [song, setSong] = useState<Song | null>(null);
@@ -61,10 +71,17 @@ export default function App() {
   const [playheadBar, setPlayheadBar] = useState(-1);
   const [mixMode, setMixMode] = useState<MixMode>("full");
   const [loopRange, setLoopRange] = useState<{ from: number; to: number } | null>(null);
+  const [titleGuess, setTitleGuess] = useState("");
+  const [titleGuessed, setTitleGuessed] = useState(false);
 
   const apSessionRef = useRef<ApSession | null>(null);
   const playbackDirtyRef = useRef(true);
   const flashTimerRef = useRef<number>(0);
+  const songRef = useRef<Song | null>(null);
+  const entryRef = useRef<EntryState>(entry);
+  const drunkDrummerPlaysRef = useRef(0);
+  const tuningTrapPlaysRef = useRef(0);
+  const copiedMeasureRef = useRef<EntryEvent[] | null>(null);
 
   // Undo/redo: snapshots of the entry state before each successful edit.
   // Cursor-only moves are not recorded. The stacks only ever change
@@ -87,9 +104,18 @@ export default function App() {
   );
 
   const complete = grade.totalTargets > 0 && grade.matchedCount === grade.totalTargets;
-  const titleRevealed = hasSongTitleReveal(unlocks);
+  const titleRevealed = hasSongTitleReveal(unlocks) || titleGuessed;
   const visibleMeasures = song ? visibleMeasureCount(unlocks, song.measureCount) : 1;
+  const canUndo = hasUnlock(unlocks, "Undo");
+  const canRedo = hasUnlock(unlocks, "Redo");
+  const canCopy = hasUnlock(unlocks, "Copy");
+  const canPaste = hasUnlock(unlocks, "Paste");
   void historyVersion;
+
+  useEffect(() => {
+    songRef.current = song;
+    entryRef.current = entry;
+  }, [song, entry]);
 
   // Two modes, told apart by what the caret sits on:
   //   entry mode - caret in a gap (the unfilled tail of any bar): keys write
@@ -117,6 +143,8 @@ export default function App() {
     redoStackRef.current = [];
     syncHistoryButtons();
     setLoopRange(null);
+    setTitleGuessed(false);
+    setTitleGuess("");
     playbackDirtyRef.current = true;
     return newSong;
   }
@@ -127,6 +155,19 @@ export default function App() {
     setFlashText(message);
     window.clearTimeout(flashTimerRef.current);
     flashTimerRef.current = window.setTimeout(() => setFlashText(""), 2500);
+  }
+
+  function submitTitleGuess(event?: { preventDefault: () => void }) {
+    event?.preventDefault();
+    if (!song) return;
+    if (normalizeTitle(titleGuess) !== normalizeTitle(song.definition.name)) {
+      flash("not quite");
+      return;
+    }
+    setTitleGuessed(true);
+    const session = apSessionRef.current;
+    if (session && reportTitleGuess(session)) saveRun(session, entry);
+    flash("song title guessed");
   }
 
   function markDirty() {
@@ -154,6 +195,11 @@ export default function App() {
   }
 
   function undo() {
+    if (undoStackRef.current.length === 0) return;
+    if (!canUndo) {
+      flash("Undo is locked.");
+      return;
+    }
     const previous = undoStackRef.current.pop();
     if (!previous) return;
     redoStackRef.current.push(entry);
@@ -163,6 +209,11 @@ export default function App() {
   }
 
   function redo() {
+    if (redoStackRef.current.length === 0) return;
+    if (!canRedo) {
+      flash("Redo is locked.");
+      return;
+    }
     const next = redoStackRef.current.pop();
     if (!next) return;
     undoStackRef.current.push(entry);
@@ -171,6 +222,45 @@ export default function App() {
     markDirty();
   }
 
+  function copyMeasure() {
+    if (!song) return;
+    if (!canCopy) {
+      flash("Copy is locked.");
+      return;
+    }
+    copiedMeasureRef.current = entry.bars[entry.cursor.barIndex].map((event) => ({ ...event }));
+    flash(`copied measure ${entry.cursor.barIndex + 1}`);
+  }
+
+  function pasteMeasure() {
+    if (!song) return;
+    if (!canPaste) {
+      flash("Paste is locked.");
+      return;
+    }
+    const copied = copiedMeasureRef.current;
+    if (!copied) {
+      flash("nothing copied");
+      return;
+    }
+    if (entry.cursor.barIndex >= visibleMeasures) {
+      flash(`Measure ${entry.cursor.barIndex + 1} is locked.`);
+      return;
+    }
+    const usedTicks = copied.reduce((sum, event) => sum + DURATIONS[event.duration].ticks * (event.dotted ? 1.5 : 1), 0);
+    if (usedTicks > song.barTicks) {
+      flash("copied measure does not fit");
+      return;
+    }
+    applyResult({
+      state: {
+        bars: entry.bars.map((bar, index) => (
+          index === entry.cursor.barIndex ? copied.map((event) => ({ ...event })) : bar
+        )),
+        cursor: { barIndex: entry.cursor.barIndex, slot: 0 },
+      },
+    });
+  }
   // Can the palette's current duration/dot be used at all?
   function checkPaletteUnlocked(): boolean {
     if (!hasDuration(unlocks, selectedDuration)) {
@@ -282,28 +372,12 @@ export default function App() {
       flash(`${DURATIONS[duration].itemName} is locked.`);
       return;
     }
-    // Edit mode: change the note under the cursor and leave the palette
-    // alone. Entry mode: just arm the palette for the next note.
-    if (editMode && song) {
-      const current = eventAtCursor(entry)!;
-      applyResult(replaceEvent(entry, entry.cursor.barIndex, entry.cursor.slot,
-        { ...current, duration }, song.barTicks),
-        current.kind === "note" ? current.midi : undefined);
-      return;
-    }
     setSelectedDuration(duration);
   }
 
   function toggleDot() {
     if (!hasDot(unlocks)) {
       flash("Dotted Modifier is locked.");
-      return;
-    }
-    if (editMode && song) {
-      const current = eventAtCursor(entry)!;
-      applyResult(replaceEvent(entry, entry.cursor.barIndex, entry.cursor.slot,
-        { ...current, dotted: !current.dotted }, song.barTicks),
-        current.kind === "note" ? current.midi : undefined);
       return;
     }
     setDotted((d) => !d);
@@ -319,6 +393,22 @@ export default function App() {
       return;
     }
     applyResult(replaceEvent(entry, active.barIndex, active.slot, { ...active.event, midi }, song.barTicks), midi);
+  }
+
+  function transposeCursorToOwnedPitch(direction: 1 | -1) {
+    if (!song) return;
+    const active = activeEvent();
+    if (!active || active.event.kind !== "note") return;
+
+    let midi = active.event.midi + direction;
+    while (midi >= LOWEST_MIDI && midi <= HIGHEST_MIDI) {
+      if (hasPitch(unlocks, midi)) {
+        applyResult(replaceEvent(entry, active.barIndex, active.slot, { ...active.event, midi }, song.barTicks), midi);
+        return;
+      }
+      midi += direction;
+    }
+    flash("No unlocked pitch that way.");
   }
 
   function deleteAtCursor() {
@@ -347,6 +437,110 @@ export default function App() {
     });
   }
 
+  function nextMissingTargetNote() {
+    const currentSong = songRef.current;
+    const currentEntry = entryRef.current;
+    if (!currentSong) return null;
+
+    const currentPlaced = flattenEntry(currentEntry, currentSong.barTicks);
+    const matchedKeys = new Set(
+      soundingNotes(currentPlaced).map((note) => `${note.startTick}:${note.durationTicks}:${note.midi}`),
+    );
+    return currentSong.targetNotes.find(
+      (note) => !matchedKeys.has(`${note.startTick}:${note.durationTicks}:${note.midi}`),
+    ) ?? null;
+  }
+
+  function showRandomHint() {
+    const currentSong = songRef.current;
+    if (!currentSong) return;
+
+    const firstNoteByMeasure = new Map<number, { midi: number }>();
+    for (const note of currentSong.targetNotes) {
+      const measure = Math.floor(note.startTick / currentSong.barTicks) + 1;
+      if (!firstNoteByMeasure.has(measure)) firstNoteByMeasure.set(measure, note);
+    }
+
+    const measures = [...firstNoteByMeasure.keys()];
+    if (measures.length === 0) return;
+
+    const measure = measures[Math.floor(Math.random() * measures.length)];
+    const note = firstNoteByMeasure.get(measure)!;
+    flash(`Random Hint: measure ${measure} starts with ${midiToName(note.midi)}.`);
+  }
+
+  function playNextPitch() {
+    const target = nextMissingTargetNote();
+    if (!target) {
+      flash("Next Pitch: melody is already solved.");
+      return;
+    }
+    initSynth().then(() => auditionNote(target.midi));
+    flash("Next Pitch: played the next missing pitch.");
+  }
+
+  function applyVoiceCrackTrap() {
+    setEntry((current) => {
+      const notes: { barIndex: number; slot: number }[] = [];
+      current.bars.forEach((bar, barIndex) => {
+        bar.forEach((event, slot) => {
+          if (event.kind === "note") notes.push({ barIndex, slot });
+        });
+      });
+
+      if (notes.length === 0) {
+        flash("Voice Crack Trap: no notes to crack.");
+        return current;
+      }
+
+      const picked = notes[Math.floor(Math.random() * notes.length)];
+      const bars = current.bars.map((bar, barIndex) => (
+        barIndex === picked.barIndex
+          ? bar.map((event, slot) => (
+            slot === picked.slot ? { ...event, midi: HIGHEST_MIDI, tiedToNext: false } : event
+          ))
+          : bar
+      ));
+      flash(`Voice Crack Trap: one note jumped to ${midiToName(HIGHEST_MIDI)}.`);
+      markDirty();
+      return { ...current, bars };
+    });
+  }
+
+  function applyDrunkDrummerTrap() {
+    drunkDrummerPlaysRef.current += 3;
+    flash(`Drunk Drummer Trap: drums offset for ${drunkDrummerPlaysRef.current} plays.`);
+  }
+
+  function applyTuningTrap() {
+    tuningTrapPlaysRef.current += 1;
+    flash("Tuning Trap: melody playback will be one semitone low next play.");
+  }
+
+  function receiveItems(itemNames: string[], runEffects = true) {
+    const unlockItems = itemNames.filter(
+      (name) => name !== RANDOM_HINT_ITEM
+        && name !== NEXT_PITCH_ITEM
+        && name !== VOICE_CRACK_TRAP_ITEM
+        && name !== DRUNK_DRUMMER_TRAP_ITEM
+        && name !== TUNING_TRAP_ITEM,
+    );
+    if (unlockItems.length > 0) setUnlocks((prev) => addUnlocks(prev, unlockItems));
+    if (itemNames.includes(SONG_TITLE_REVEAL_ITEM)) {
+      setTitleGuessed(true);
+      const session = apSessionRef.current;
+      if (session && reportTitleGuess(session)) saveRun(session, entryRef.current);
+    }
+
+    if (!runEffects) return;
+    for (const name of itemNames) {
+      if (name === RANDOM_HINT_ITEM) showRandomHint();
+      else if (name === NEXT_PITCH_ITEM) playNextPitch();
+      else if (name === VOICE_CRACK_TRAP_ITEM) applyVoiceCrackTrap();
+      else if (name === DRUNK_DRUMMER_TRAP_ITEM) applyDrunkDrummerTrap();
+      else if (name === TUNING_TRAP_ITEM) applyTuningTrap();
+    }
+  }
   // ---------------------------------- keyboard ----------------------------------
 
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -361,6 +555,8 @@ export default function App() {
     if (e.ctrlKey || e.metaKey) {
       if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
       else if (key === "y" || (key === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
+      else if (key === "c") { e.preventDefault(); copyMeasure(); }
+      else if (key === "v") { e.preventDefault(); pasteMeasure(); }
       return;
     }
 
@@ -377,8 +573,8 @@ export default function App() {
     else if (key === "t") enterTie();
     else if (key === "arrowleft") { e.preventDefault(); if (song) setEntry((s) => moveCursorBy(s, -1, song.barTicks)); }
     else if (key === "arrowright") { e.preventDefault(); if (song) setEntry((s) => moveCursorBy(s, 1, song.barTicks)); }
-    else if (key === "arrowup") { e.preventDefault(); transposeCursor(1); }
-    else if (key === "arrowdown") { e.preventDefault(); transposeCursor(-1); }
+    else if (key === "arrowup") { e.preventDefault(); transposeCursorToOwnedPitch(1); }
+    else if (key === "arrowdown") { e.preventDefault(); transposeCursorToOwnedPitch(-1); }
     else if (key === "+" || key === "=") transposeCursor(12);
     else if (key === "-") transposeCursor(-12);
     else if (key === "backspace") { e.preventDefault(); deleteAtCursor(); }
@@ -410,7 +606,17 @@ export default function App() {
       return;
     }
     // Play always starts from wherever the cursor is.
-    const bytes = buildPlaybackMidi(song, placed, mixMode, unlocks);
+    const drunkDrummer = drunkDrummerPlaysRef.current > 0;
+    const tuningTrap = tuningTrapPlaysRef.current > 0;
+    const bytes = buildPlaybackMidi(song, placed, mixMode, unlocks, { drunkDrummer, tuningTrap });
+    if (drunkDrummer) {
+      drunkDrummerPlaysRef.current -= 1;
+      flash(`Drunk Drummer Trap: ${drunkDrummerPlaysRef.current} plays left.`);
+    }
+    if (tuningTrap) {
+      tuningTrapPlaysRef.current -= 1;
+      flash("Tuning Trap: melody playback is one semitone low.");
+    }
     playMidiFrom(bytes, tickToSeconds(song, cursorStartTick()));
     playbackDirtyRef.current = false;
     setPlaying(true);
@@ -465,24 +671,23 @@ export default function App() {
 
   async function handleConnect(host: string, port: string, slot: string) {
     try {
-      const session = await connect(host, port, slot, (names) => {
-        setUnlocks((prev) => {
-          const next = new Set(prev);
-          for (const name of names) next.add(name);
-          return next;
-        });
-      });
+      const session = await connect(host, port, slot, receiveItems);
+
       apSessionRef.current = session;
       setConnected(true);
       setStatusText(`Connected as ${slot}`);
       // The seed decides which song this run is.
-      const seedSong = songByKey(session.songKey);
+      const seedSong = songByIndex(session.songIndex) ?? songByKey(session.songKey);
       const activeSong = seedSong && seedSong.key !== song?.definition.key ? await loadSong(seedSong) : song;
       const save = loadSavedRun(session);
       if (save && activeSong && save.entry.bars.length === activeSong.measureCount) {
         setEntry(save.entry);
         setStatusText(`Connected as ${slot} - restored save`);
         markDirty();
+      }
+      if (session.client.items.received.some((item) => item.name === SONG_TITLE_REVEAL_ITEM)) {
+        setTitleGuessed(true);
+        reportTitleGuess(session);
       }
     } catch (error) {
       setStatusText(`Connection failed: ${String(error)}`);
@@ -493,11 +698,7 @@ export default function App() {
     setOfflineMode(enabled);
     if (enabled) {
       const offline = await loadOfflineUnlocks();
-      setUnlocks((prev) => {
-        const next = new Set(prev);
-        for (const name of offline) next.add(name);
-        return next;
-      });
+      setUnlocks(offline);
       setStatusText("Offline dev mode: unlocks from offline-unlocks.json");
     }
   }
@@ -531,7 +732,19 @@ export default function App() {
 
       {song && (
         <div className="song-panel">
-          <TrackList song={song} tracks={listTracks(song.midi)} unlocks={unlocks} titleRevealed={titleRevealed} />
+          <div className="song-info-column">
+            <TrackList song={song} tracks={listTracks(song.midi)} unlocks={unlocks} titleRevealed={titleRevealed} />
+            {!titleRevealed && (
+              <form className="title-guess" onSubmit={submitTitleGuess}>
+                <input
+                  value={titleGuess}
+                  onChange={(event) => setTitleGuess(event.target.value)}
+                  placeholder="guess song title"
+                />
+                <button type="submit">guess</button>
+              </form>
+            )}
+          </div>
           <PitchGrid unlocks={unlocks} onPickPitch={(midi) => enterNote(midi, "cursor")} />
         </div>
       )}
@@ -583,15 +796,27 @@ export default function App() {
               <button
                 className="transport-button"
                 title="Undo (Ctrl+Z)"
-                disabled={undoStackRef.current.length === 0}
+                disabled={!canUndo || undoStackRef.current.length === 0}
                 onClick={undo}
               >undo</button>
               <button
                 className="transport-button"
                 title="Redo (Ctrl+Y)"
-                disabled={redoStackRef.current.length === 0}
+                disabled={!canRedo || redoStackRef.current.length === 0}
                 onClick={redo}
               >redo</button>
+              <button
+                className="transport-button"
+                title="Copy measure (Ctrl+C)"
+                disabled={!canCopy}
+                onClick={copyMeasure}
+              >copy</button>
+              <button
+                className="transport-button"
+                title="Paste measure (Ctrl+V)"
+                disabled={!canPaste}
+                onClick={pasteMeasure}
+              >paste</button>
             </div>
 
             <span className="completion">
@@ -623,7 +848,7 @@ export default function App() {
 
       <footer>
         <span>
-          Keys: A-G notes | 1-5 duration | . dot | T tie | R rest | arrow keys move and transpose | # sharp | b flat on selected note | +/- octave | Ctrl+Z/Y undo/redo | Backspace delete | Space play | Esc stop | mouse uses Select / Write / Delete | right-click selects | green pitch cells enter notes
+          Keys: A-G notes | 1-5 durations | . dot | T tie | R rest | arrows move or transpose | #/b semitone | +/- octave | Ctrl+Z/Y undo/redo | Ctrl+C/V copy/paste measure | Backspace delete | Space play | Esc stop
         </span>
       </footer>
     </div>

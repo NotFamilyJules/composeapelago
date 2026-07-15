@@ -1,4 +1,4 @@
-﻿// Everything audio: the SpessaSynth synthesizer, the bundled GM SoundFont,
+// Everything audio: the SpessaSynth synthesizer, the bundled GM SoundFont,
 // and the sequencer transport. One module-level singleton so the whole app
 // shares one AudioContext.
 //

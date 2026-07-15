@@ -9,8 +9,14 @@ import type { PlacedEvent } from "./entry";
 import { TICKS_PER_QUARTER } from "./theory";
 import { soundingNotes } from "./grading";
 import type { Unlocks } from "./unlocks";
+import { hasUnlock } from "./unlocks";
 
 export type MixMode = "full" | "solo";
+
+export interface PlaybackEffects {
+  drunkDrummer: boolean;
+  tuningTrap: boolean;
+}
 
 // Find a MIDI channel the backing tracks are not using (9 is drums).
 function freeChannel(midi: Midi): number {
@@ -21,9 +27,20 @@ function freeChannel(midi: Midi): number {
   return 15;
 }
 
+function offsetTrack(track: Midi["tracks"][number], offsetTicks: number, ppq: number): void {
+  const fileOffsetTicks = Math.round(offsetTicks * (ppq / TICKS_PER_QUARTER));
+  for (const note of track.notes) note.ticks += fileOffsetTicks;
+}
+
 // The full mix: unlocked backing tracks as-is, locked ones silent, the
 // original melody track silenced, and the player's entry as piano on top.
-export function buildPlaybackMidi(song: Song, placed: PlacedEvent[], mode: MixMode, unlocks: Unlocks): Uint8Array {
+export function buildPlaybackMidi(
+  song: Song,
+  placed: PlacedEvent[],
+  mode: MixMode,
+  unlocks: Unlocks,
+  effects: PlaybackEffects = { drunkDrummer: false, tuningTrap: false },
+): Uint8Array {
   // Re-parse the original bytes so we never mutate the loaded song.
   const midi = new Midi(song.sourceBytes);
 
@@ -32,13 +49,16 @@ export function buildPlaybackMidi(song: Song, placed: PlacedEvent[], mode: MixMo
   } else {
     midi.tracks[song.melodyTrackIndex].notes = [];
     for (const backing of song.definition.backingTracks) {
-      if (!unlocks.has(backing.itemName)) {
-        midi.tracks[backing.trackIndex].notes = [];
+      const track = midi.tracks[backing.trackIndex];
+      if (!hasUnlock(unlocks, backing.itemName)) {
+        track.notes = [];
+      } else if (effects.drunkDrummer && backing.itemName === "Drum Track") {
+        offsetTrack(track, TICKS_PER_QUARTER * 1.5, midi.header.ppq);
       }
     }
   }
 
-  addPlayerTrack(midi, placed);
+  addPlayerTrack(midi, placed, effects.tuningTrap ? -1 : 0);
   return midi.toArray();
 }
 
@@ -69,7 +89,7 @@ export function buildReferenceMidi(song: Song, fromBar: number, toBar: number): 
 
 // Tied entry notes are merged before playback so they sound as one held
 // note instead of two attacks.
-function addPlayerTrack(midi: Midi, placed: PlacedEvent[]): void {
+function addPlayerTrack(midi: Midi, placed: PlacedEvent[], transposeSemitones: number): void {
   const scale = midi.header.ppq / TICKS_PER_QUARTER;
   const track = midi.addTrack();
   track.name = "Player Melody";
@@ -78,7 +98,7 @@ function addPlayerTrack(midi: Midi, placed: PlacedEvent[]): void {
 
   for (const sounding of soundingNotes(placed)) {
     track.addNote({
-      midi: sounding.midi,
+      midi: sounding.midi + transposeSemitones,
       ticks: Math.round(sounding.startTick * scale),
       durationTicks: Math.round(sounding.durationTicks * scale),
       velocity: 0.85,

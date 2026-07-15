@@ -1,4 +1,4 @@
-﻿// The Archipelago connection. Connect with host/port/slot, receive items
+// The Archipelago connection. Connect with host/port/slot, receive items
 // as unlock names, send location checks as the melody grows, send the goal
 // at 100%.
 //
@@ -10,6 +10,7 @@ import { Client } from "archipelago.js";
 
 const NOTE_LOCATION_BASE = 76245000;
 const BAR_LOCATION_BASE = 76246000;
+const TITLE_GUESS_LOCATION_ID = 76248001;
 
 export const LOCATION_MODE_PER_NOTE = 0;
 export const LOCATION_MODE_BARS = 1;
@@ -23,7 +24,8 @@ export interface SlotOptions {
 
 interface SlotData {
   options: SlotOptions;
-  song: string; // which premade song this seed picked (see songs.ts)
+  song: string; // fallback key for older apworlds
+  song_index?: number; // indexed song picked by the apworld
   Seed: string;
   Slot: string;
   TotalLocations: number;
@@ -34,12 +36,14 @@ export interface ApSession {
   client: Client;
   options: SlotOptions;
   songKey: string;
+  songIndex: number;
   seedName: string;
   slotName: string;
   totalLocations: number;
   totalMeasures: number;
   checksSent: number; // how many rungs of the location ladder we've sent
   goalSent: boolean;
+  titleGuessSent: boolean;
 }
 
 function checkedCountForSession(client: Client, locationMode: number, totalLocations: number): number {
@@ -56,30 +60,33 @@ export async function connect(
   host: string,
   port: string,
   slot: string,
-  onItems: (itemNames: string[]) => void,
+  onItems: (itemNames: string[], runEffects: boolean) => void,
 ): Promise<ApSession> {
   const client = new Client();
-  client.items.on("itemsReceived", (items) => {
-    onItems(items.map((item) => item.name));
-  });
 
   const slotData = await client.login<Record<string, never>>(
     `${host}:${port}`, slot, "Composeapelago",
   ) as unknown as SlotData;
 
+  onItems(client.items.received.map((item) => item.name), false);
+  client.items.on("itemsReceived", (items) => {
+    onItems(items.map((item) => item.name), true);
+  });
+
   return {
     client,
     options: slotData.options,
     songKey: slotData.song ?? "",
+    songIndex: slotData.song_index ?? -1,
     seedName: slotData.Seed ?? "",
     slotName: slotData.Slot ?? slot,
     totalLocations: slotData.TotalLocations ?? 0,
     totalMeasures: slotData.TotalMeasures ?? 0,
     checksSent: checkedCountForSession(client, slotData.options.location_mode, slotData.TotalLocations ?? 0),
     goalSent: false,
+    titleGuessSent: client.room.checkedLocations.includes(TITLE_GUESS_LOCATION_ID),
   };
 }
-
 // The location ladder: check counts only ever go up, one location per rung.
 // progressCount is matched notes (per_note mode) or completed bars (bars
 // mode); at 100% completion everything left is flushed and the goal fires.
@@ -106,5 +113,9 @@ export function reportProgress(session: ApSession, progressCount: number, comple
 
   return changed;
 }
-
-
+export function reportTitleGuess(session: ApSession): boolean {
+  if (session.titleGuessSent) return false;
+  session.client.check(TITLE_GUESS_LOCATION_ID);
+  session.titleGuessSent = true;
+  return true;
+}

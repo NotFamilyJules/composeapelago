@@ -1,4 +1,4 @@
-﻿# Item tables and item pool creation.
+# Item tables and item pool creation.
 
 from typing import TYPE_CHECKING, List
 from BaseClasses import Item, ItemClassification
@@ -12,11 +12,21 @@ if TYPE_CHECKING:
 PITCH_CLASS_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 LOWEST_OCTAVE = 1
 HIGHEST_OCTAVE = 7
-PRIORITY_OCTAVES = (3, 4)
-MAX_MEASURES = 300
+PRIORITY_OCTAVES = (4, 5)
+MAX_MEASURES = 150
 
 STARTING_NOTE_VALUES = ["Quarter Note", "Whole Note", "Rest"]
 SONG_TITLE_REVEAL_ITEM = "Song Title Reveal"
+PROGRESSIVE_MEASURE_ITEM = "Progressive Measure"
+RANDOM_HINT_ITEM = "Random Hint"
+NEXT_PITCH_ITEM = "Next Pitch"
+VOICE_CRACK_TRAP_ITEM = "Voice Crack Trap"
+DRUNK_DRUMMER_TRAP_ITEM = "Drunk Drummer Trap"
+TUNING_TRAP_ITEM = "Tuning Trap"
+UNDO_ITEM = "Undo"
+REDO_ITEM = "Redo"
+COPY_ITEM = "Copy"
+PASTE_ITEM = "Paste"
 
 NOTE_VALUE_ITEM_NAMES = [
     "Half Note",
@@ -40,9 +50,6 @@ def pitch_item_name(pitch_class: str, octave: int) -> str:
     return f"{pitch_class}{octave}"
 
 
-def measure_item_name(n: int) -> str:
-    return f"Measure {n}"
-
 
 def is_priority_pitch(name: str) -> bool:
     return name[-1].isdigit() and int(name[-1]) in PRIORITY_OCTAVES
@@ -52,7 +59,7 @@ def create_itempool(world: "ComposeapelagoWorld") -> List[Item]:
     itempool: List[Item] = []
     song = SONGS[world.song_key]
     track_item_names = song["track_items"]
-    measure_item_names = [measure_item_name(n) for n in range(2, song["measure_count"] + 1)]
+    measure_item_names = [PROGRESSIVE_MEASURE_ITEM for _ in range(min(MAX_MEASURES, song["measure_count"]) - 1)]
     bars_mode = getattr(world.options, "location_mode").value == 1
     if bars_mode:
         for name in measure_item_names:
@@ -63,7 +70,7 @@ def create_itempool(world: "ComposeapelagoWorld") -> List[Item]:
         list(composeapelago_pitches.keys())
         + list(NOTE_VALUE_ITEM_NAMES)
         + list(track_item_names)
-        + [SONG_TITLE_REVEAL_ITEM]
+        + [SONG_TITLE_REVEAL_ITEM, UNDO_ITEM, REDO_ITEM, COPY_ITEM, PASTE_ITEM]
         + measure_item_names
     )
 
@@ -87,6 +94,21 @@ def create_itempool(world: "ComposeapelagoWorld") -> List[Item]:
 
     for name in pool_names:
         itempool.append(create_item(world, name))
+
+    open_slots = total_locations - len(itempool)
+    special_item_pattern = [
+        RANDOM_HINT_ITEM,
+        NEXT_PITCH_ITEM,
+        VOICE_CRACK_TRAP_ITEM,
+        RANDOM_HINT_ITEM,
+        NEXT_PITCH_ITEM,
+        DRUNK_DRUMMER_TRAP_ITEM,
+        RANDOM_HINT_ITEM,
+        NEXT_PITCH_ITEM,
+        TUNING_TRAP_ITEM,
+    ]
+    for index in range(open_slots):
+        itempool.append(create_item(world, special_item_pattern[index % len(special_item_pattern)]))
 
     victory = create_item(world, "Victory")
     world.multiworld.get_location("Melody Complete", world.player).place_locked_item(victory)
@@ -147,11 +169,19 @@ composeapelago_tracks = {
 
 composeapelago_special = {
     SONG_TITLE_REVEAL_ITEM:     ItemData(76244101, ItemClassification.useful),
+    RANDOM_HINT_ITEM:           ItemData(76244102, ItemClassification.useful),
+    VOICE_CRACK_TRAP_ITEM:      ItemData(76244103, ItemClassification.trap),
+    DRUNK_DRUMMER_TRAP_ITEM:    ItemData(76244104, ItemClassification.trap),
+    NEXT_PITCH_ITEM:            ItemData(76244105, ItemClassification.useful),
+    TUNING_TRAP_ITEM:           ItemData(76244106, ItemClassification.trap),
+    UNDO_ITEM:                  ItemData(76244107, ItemClassification.useful),
+    REDO_ITEM:                  ItemData(76244108, ItemClassification.useful),
+    COPY_ITEM:                  ItemData(76244109, ItemClassification.useful),
+    PASTE_ITEM:                 ItemData(76244110, ItemClassification.useful),
 }
 
 composeapelago_measures = {
-    measure_item_name(n):       ItemData(76247000 + n, ItemClassification.progression)
-    for n in range(2, MAX_MEASURES + 1)
+    PROGRESSIVE_MEASURE_ITEM:    ItemData(76247001, ItemClassification.progression),
 }
 
 composeapelago_events = {

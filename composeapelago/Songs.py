@@ -1,4 +1,4 @@
-﻿# The premade song library. Each run randomly plays one of these songs,
+# The premade song library. Each run randomly plays one of these songs,
 # then tells the client through slot_data.
 #
 # The keys and track item names must match the webapp's src/songs.ts
@@ -49,3 +49,4 @@ SONGS = {
     # add-song:song (scripts/add-song.mjs inserts new songs here)
 }
 
+SONG_ORDER = tuple(SONGS.keys())

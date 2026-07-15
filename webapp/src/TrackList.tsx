@@ -3,6 +3,7 @@
 
 import type { Song, TrackSummary } from "./song";
 import type { Unlocks } from "./unlocks";
+import { hasUnlock } from "./unlocks";
 
 interface TrackListProps {
   song: Song;
@@ -40,7 +41,7 @@ export function TrackList(props: TrackListProps) {
           </tr>
           {song.definition.backingTracks.map((backing) => {
             const track = rowFor(backing.trackIndex);
-            const unlocked = unlocks.has(backing.itemName);
+            const unlocked = hasUnlock(unlocks, backing.itemName);
             return (
               <tr key={backing.itemName} className={unlocked ? "" : "locked-track"}>
                 <td>{unlocked ? "unlocked" : `locked: ${backing.itemName}`}</td>
